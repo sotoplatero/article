@@ -1,26 +1,44 @@
-import Mercury from '@postlight/mercury-parser';
+// var Mercury = require'@postlight/mercury-parser';
+var { Readability } = require('@mozilla/readability');
+var { JSDOM } = require('jsdom');
+var got = require('got');
+const metascraper = require('metascraper')([
+  require('metascraper-author')(),
+  require('metascraper-date')(),
+  require('metascraper-image')(),
+  require('metascraper-logo')(),
+  require('metascraper-logo-favicon')(),
+  require('metascraper-clearbit')(),
+])
 
 module.exports = async (req, res) => {
   const { url } = req.query;
-  let article = {}
 
   try {
-    const { 
-      title, 
-      author,
-      date_published: date,
-      lead_image_url: image,
-      word_count: words,
-      content,
-      excerpt,
-     } = await Mercury.parse(url)
 
-     article = { title, image, date, content, excerpt, author}
+
+    const { body: html } = await got(url)
+
+    const metadata = await metascraper({ html, url })
+    // console.log(metadata)
+    const doc = new JSDOM(html, { url });
+    let reader = new Readability(doc.window.document);
+
+    const article = reader.parse();
+
+    res.setHeader('Cache-Control', 's-maxage=1, stale-while-revalidate');
+    res.json({
+      title: article.title,
+      logo: metadata.logo,
+      image: metadata.image,
+      content: article.content,
+      excerpt: article.excerpt,
+      words: article.textContent.match(/\w+/g).length,
+    });
 
   } catch(err) {
     console.log(err)
+    res.status(500).json({message: e.message})
   }
 
-  res.setHeader('Cache-Control', 'public, immutable, no-transform, s-maxage=31536000, max-age=31536000');
-  res.json(article);
 };
