@@ -1,7 +1,8 @@
 // var Mercury = require'@postlight/mercury-parser';
 var got = require('got');
 var cheerio = require('cheerio');
-const { getDomain } = require('tldjs');
+const { getHostname } = require('tldts');
+
 const metascraper = require('metascraper')([
   require('metascraper-title')(),
   require('metascraper-author')(),
@@ -31,7 +32,7 @@ module.exports = async (req, res) => {
     res.json({
       ...metadata,
       url,
-      hostname: getDomain(url),
+      hostname: getHostname(url),
       rss: $(selectors.rss)?.attr('href'),
       twitter: $(selectors.twitter)?.attr('content'),
     });
